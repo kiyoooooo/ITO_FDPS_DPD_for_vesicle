@@ -673,7 +673,7 @@ int main(int argc, char **argv){
        system_dpd,dinfo,true,reuse_mode);
 #endif
     //    if(isMasterProc()) std::cout << "OK18 and s = " << s << std::endl;//add by kiyoshiro to know where is the error
-    CalcInternalForce(system_dpd,tree_dpd,ebond,eangle);
+    //    CalcInternalForce(system_dpd,tree_dpd,ebond,eangle);下に追記したためいらない行．この行によって間違った計算を流した．
     
     //    if(isMasterProc()) std::cout << "OK19 and s = " << s << std::endl;//add by kiyoshiro to know where is the error
     PS::F64 offset_calc_internal_force = PS::GetWtime();//add by kiyoshiro adviced by nomura-san
