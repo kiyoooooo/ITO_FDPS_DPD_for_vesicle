@@ -1,0 +1,240 @@
+#include <pzc_builtin.h>
+
+#include "../class_device.hpp"
+#include "half4.h"
+
+struct ForceAccum{
+  float x;
+  float y;
+  float z;
+#ifndef DISABLE_ENERGY_CALCULATION
+  float u;
+#endif
+};
+
+__attribute__ ((always_inline))
+static inline float conv_3rd(float x, float y){
+  float h = 1.f - x * (y * y);
+  float poly = h * (0.5f + h * 0.375f);
+  float ret =  y*poly + y;
+  return ret;
+}
+static inline float rsqrtf_app(float x){
+    union{
+        float f;
+        int   i;
+    }m32;
+    m32.f = x;
+    m32.i = 0x5f3759df - (m32.i >> 1);
+
+    return m32.f;
+}
+
+static inline float rsqrtf(float x){
+  return conv_3rd(x,conv_3rd(x,rsqrtf_app(x)));
+}
+
+static inline float log2f(float val) {
+    union { float val; int32_t x; } u = { val };
+    float log_2 = (float)(((u.x >> 23) & 255) - 128);
+    u.x   &= ~(255 << 23);
+    u.x   += 127 << 23;
+    log_2 += ((-0.34484843f) * u.val + 2.02466578f) * u.val - 0.67487759f;
+    return (log_2);
+}
+
+#define _LN_2 6.9314718055994528623E-1f
+#define _2_TO_MINUS_31 4.6566128730773925781E-10f
+#define _2_TO_MINUS_32 2.3283064365386962891E-10f
+
+#define _TEA_K0 0xA341316C
+#define _TEA_K1 0xC8013EA4
+#define _TEA_K2 0xAD90777D
+#define _TEA_K3 0x7E95761E
+#define _TEA_DT 0x9E3779B9
+static inline float gausian_tea(const unsigned int* v0,const unsigned int* v1){
+  unsigned int u0 =   *v0 > *v1  ? *v0 : *v1;
+  unsigned int u1 = !(*v0 > *v1) ? *v0 : *v1;
+  unsigned int sum = _TEA_DT;
+  u0 += ((u1 << 4) + _TEA_K0) ^ (u1 + sum) ^ ( (u1 >> 5) + _TEA_K1);
+  u1 += ((u0 << 4) + _TEA_K2) ^ (u0 + sum) ^ ( (u0 >> 5) + _TEA_K3);
+  sum += _TEA_DT;
+  u0 += ((u1 << 4) + _TEA_K0) ^ (u1 + sum) ^ ( (u1 >> 5) + _TEA_K1);
+  u1 += ((u0 << 4) + _TEA_K2) ^ (u0 + sum) ^ ( (u0 >> 5) + _TEA_K3);
+  sum += _TEA_DT;
+  u0 += ((u1 << 4) + _TEA_K0) ^ (u1 + sum) ^ ( (u1 >> 5) + _TEA_K1);
+  u1 += ((u0 << 4) + _TEA_K2) ^ (u0 + sum) ^ ( (u0 >> 5) + _TEA_K3);
+  sum += _TEA_DT;
+  u0 += ((u1 << 4) + _TEA_K0) ^ (u1 + sum) ^ ( (u1 >> 5) + _TEA_K1);
+  u1 += ((u0 << 4) + _TEA_K2) ^ (u0 + sum) ^ ( (u0 >> 5) + _TEA_K3);
+  float f = cos( 2.f * 3.141592f * ( u0 & 0x7FFFFFFF ) * _2_TO_MINUS_31) * ( ( u0 & 0x80000000 ) ? 1.0f : -1.0f );
+  float r = sqrtf( -2.0f * _LN_2 * log2f(u1 * _2_TO_MINUS_32) );
+  float ret = r*f;
+  return ret > 4.f ? 4.f : (ret < -4.f ? -4.f : ret);
+}
+
+void pzc_ForceKernelIndex(const int    *j_disp,
+			  const EpDev  *epi,
+			  const EpDev  *epj,
+			  const int    *id_epj,
+			  ForceDev     *force,
+			  float         dt,
+			  float         temp,
+			  float         temp_rand,
+			  const int     n_total){
+  // constnt for conservatio force
+  float* coef_c = (float*)0x2000;
+  // iijj
+  coef_c[0]  = 25.f;  // 0000
+  coef_c[1]  = 200.f; // 0001
+  coef_c[2]  = 25.f;  // 0010
+  coef_c[3]  = 30.f;  // 0011
+  coef_c[4]  = 200.f; // 0100
+  coef_c[5]  = 25.f;  // 0101
+  coef_c[6]  = 200.f; // 0110
+  coef_c[7]  = 200.f; // 0111
+  coef_c[8]  = 25.f;  // 1000
+  coef_c[9]  = 200.f; // 1001
+  coef_c[10] = 25.f;  // 1010
+  coef_c[11] = 30.f;  // 1011
+  coef_c[12] = 30.f;  // 1100
+  coef_c[13] = 200.f; // 1101
+  coef_c[14] = 30.f;  // 1110
+  coef_c[15] = 25.f;  // 1111
+
+  ForceDev   *fi   = (ForceDev*)(coef_c+16);
+  ForceAccum *facc = (ForceAccum*)(fi+8);
+
+  const float rdti = 1.f * rsqrtf(dt);
+  const float coef_d = 4.5f;
+  const float sigma = sqrt(2.f*coef_d*temp);
+  const float coef_r = sigma*sqrt(temp_rand)*rdti;
+
+  const int tid   = get_tid();
+  const int pid   = get_pid();
+  const int gid   = get_maxtid()*pid + tid;
+  const int gsize = get_maxtid()*get_maxpid();
+
+  const int i_head = pid;
+  const int i_tail = n_total;
+  const int i_base = get_maxpid();
+
+  for(int index=i_head; index<i_tail; index += i_base){
+    const float xi  = epi[index].x;
+    const float yi  = epi[index].y;
+    const float zi  = epi[index].z;
+    const float vxi = epi[index].vx;
+    const float vyi = epi[index].vy;
+    const float vzi = epi[index].vz;
+    const unsigned int walk = epi[index].walk & 0x3fffffff;
+    const unsigned int ti   = (0xc0000000 & epi[index].walk) >> 28;
+    chgthread();
+    const int j_head = j_disp[walk] + tid;
+    const int j_tail = j_disp[walk+1];
+    fi[tid].clear();
+    facc[tid].x = facc[tid].y = facc[tid].z = facc[tid].u = 0.f;
+
+    unsigned int accumlate_count = 0;
+    unsigned int idj_next = id_epj[j_head];
+    asm volatile ("// JLOOPSTART");
+    for(int j = j_head; j<j_tail; j+=get_maxtid()){
+      unsigned int idj,tj;
+      float dx,dy,dz,rsq;
+      float xj,yj,zj;
+#if 1
+      idj = id_epj[j];
+      xj = epj[idj].x;
+      yj = epj[idj].y;
+      zj = epj[idj].z;
+      tj = epj[idj].walk | ti;
+      dx = xi - xj;
+      dy = yi - yj;
+      dz = zi - zj;
+      rsq  = dx * dx;
+      rsq += dy * dy;
+      rsq += dz * dz;
+#else
+      f_eld(xj,&epj[idj_next],0);
+      f_eld(yj,&epj[idj_next],4);
+      f_eld(zj,&epj[idj_next],8);
+      f_sub(dx,xi,xj);
+
+      f_mul(rsq,dx,dx);
+      f_sub(dy,yi,yj);
+
+      f_sub(dz,zi,zj);
+      f_mad(rsq,dy,dy,rsq);
+
+      f_mad(rsq,dz,dz,rsq);
+      idj = idj_next;
+      idj_next = idj_loc[j+8];
+      chgthread();
+#endif
+      if(rsq > 1.f || rsq == 0.f) continue;
+      /* insert calc force */
+      float r,ri,rn;
+      float wij,ftmp,drdv;
+      float vxj,vyj,vzj;
+      float dvx,dvy,dvz;
+      ri = rsqrtf(rsq);
+      r = rsq * ri;
+      wij = 1.f - r;
+      ftmp = 0.f;
+      // calc repulsive force
+      ftmp += coef_c[tj]*wij*ri;
+
+      // calc dissipative force
+      vxj = epj[idj].vx;
+      vyj = epj[idj].vy;
+      vzj = epj[idj].vz;
+      dvx = vxi - vxj;
+      dvy = vyi - vyj;
+      dvz = vzi - vzj;
+      drdv  = dx*dvx;
+      drdv += dy*dvy;
+      drdv += dz*dvz;
+      ftmp -= coef_d * wij * wij * drdv * ri*ri;
+      // calc random force
+      rn = gausian_tea((unsigned int*)&vxi,(unsigned int*)&vxj);
+      ftmp += coef_r * wij * ri * rn;
+#if 0
+      facc[tid].x += ftmp * dx;
+      facc[tid].y += ftmp * dy;
+      facc[tid].z += ftmp * dz;
+      accumlate_count++;
+      if(accumlate_count == 16){
+	fi[tid].x += (double)facc[tid].x;
+	fi[tid].y += (double)facc[tid].y;
+	fi[tid].z += (double)facc[tid].z;
+	fi[tid].u += (double)facc[tid].u;
+	facc[tid].x = facc[tid].y = facc[tid].z = facc[tid].u = 0.0;
+	accumlate_count = 0;
+      }
+#endif
+      fi[tid].x += (double) ftmp*dx;
+      fi[tid].y += (double) ftmp*dy;
+      fi[tid].z += (double) ftmp*dz;
+      fi[tid].u += (double) coef_c[tj] * wij * wij;
+    }// for j
+    asm volatile ("// JLOOPEND");
+#if 0
+    fi[tid].x += (double)facc[tid].x;
+    fi[tid].y += (double)facc[tid].y;
+    fi[tid].z += (double)facc[tid].z;
+    fi[tid].u += (double)facc[tid].u;
+#endif
+    sync_L1();
+    if(tid == 0){
+      for(int i=1;i<get_maxtid();i++){
+	fi[0].x += fi[i].x;
+	fi[0].y += fi[i].y;
+	fi[0].z += fi[i].z;
+	fi[0].u += fi[i].u;
+      }
+      fi[0].u *= 0.5;
+      force[index] = fi[0];
+    }
+    sync_L1();
+  }// for i
+  flush();
+}
