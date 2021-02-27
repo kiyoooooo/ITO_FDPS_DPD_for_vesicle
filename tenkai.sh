@@ -1,11 +1,11 @@
 #!/bin/sh  
-DIR=exp_double4
+DIR=exp_double1
 
 #tar -xvf vesicle_input3000_withdelete_opti0/archive.tar -C vesicle_input3000_withdelete_opti0/
 #tar -xvf vesicle_input3000_withdelete_opti1/archive.tar -C vesicle_input3000_withdelete_opti1/
 #tar -xvf vesicle_input3000_withdelete_opti2/archive.tar -C vesicle_input3000_withdelete_opti2/
 
-tar -xvf $DIR/archive.tar -C $DIR/
+tar -zxvf $DIR/archive.tar.gz -C $DIR/
 
 
 #mv vesicle_input3000_withdelete_opti0/output/* vesicle_input3000_withdelete_opti0/
