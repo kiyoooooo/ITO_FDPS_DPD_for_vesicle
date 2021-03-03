@@ -34,7 +34,10 @@
 //const PS::S32 NMOL  = 40870869;//changed by kiyoshiro "double_vesicle_input3000_midium_water4"
 //const PS::S32 NMOL  = 40874996;//changed by kiyoshiro "double_vesicle_input3000_midium_water5"
 //const PS::S32 NMOL  = 3141832;//changed by kiyoshiro "exp_vesicle4"
-const PS::S32 NMOL  = 4406209;//changed by kiyoshiro "exp_double4"
+//const PS::S32 NMOL  = 4406209;//changed by kiyoshiro "exp_double4"
+//const PS::S32 NMOL  = 13792;//changed by kiyoshiro "exp_vesicle1"
+//const PS::S32 NMOL  = 20598;//changed by kiyoshiro "exp_double1"
+const PS::S32 NMOL  = 717913;//changed by kiyoshiro "exp_double3"
 //const PS::S32 NATOM = 4; //what is this?
 const PS::S32 NATOM = 1;//chaged by kiyoshiro
 const PS::S32 NCHAIN_VECICLE = 4;
@@ -80,28 +83,31 @@ const PS::F64 DZZ = 1.0;
 //const PS::F64vec VOLUME = PS::F64vec(211.542 ,211.542 ,304.871 );//changed by kiyoshiro "double_vesicle_input3000_midium_water4"距離を改善した．
 //const PS::F64vec VOLUME = PS::F64vec(211.542 ,211.542 ,304.901 );//changed by kiyoshiro "double_vesicle_input3000_midium_water5"距離を改善した．
 //const PS::F64vec VOLUME = PS::F64vec(101.552 ,101.552 ,101.552 );//changed by kiyoshiro "exp_vesicle4"．
-const PS::F64vec VOLUME = PS::F64vec(101.552 ,101.552 ,142.267 );//changed by kiyoshiro "exp_double4"．
+//const PS::F64vec VOLUME = PS::F64vec(101.552 ,101.552 ,142.267 );//changed by kiyoshiro "exp_double4"．
+//const PS::F64vec VOLUME = PS::F64vec(16.6278 ,16.6278 ,16.6278 );//changed by kiyoshiro "exp_vesicle1"．
+//const PS::F64vec VOLUME = PS::F64vec(16.6278 ,16.6278 ,24.8541 );//changed by kiyoshiro "exp_double1"．
+const PS::F64vec VOLUME = PS::F64vec(56.1845 ,56.1845 ,75.7913 );//changed by kiyoshiro "exp_double3"．
 const PS::F64vec VOLUME_INV = PS::F64vec(1.0/VOLUME.x, 1.0/VOLUME.y, 1.0/VOLUME.z);
 const PS::F64vec VOLUME_HALF = PS::F64vec(0.5*VOLUME.x, 0.5*VOLUME.y, 0.5*VOLUME.z);
 
 
 
-const PS::F64 COEF_REP[5][5] =
+/*const PS::F64 COEF_REP[5][5] =
   {{ 25., 200.,  25.,  25., 200.},
    {200.,  25., 200., 200.,  25.},
    { 25., 200.,  25.,  25., 200.},
    { 25., 200.,  25.,  25., 200.},
    {200.,  25., 200., 200.,  25.}
-  };
+   };*/
 
 
-/*const PS::F64 COEF_REP[5][5] =
+const PS::F64 COEF_REP[5][5] =
   {{ 25., 150.,  25.,  25., 150.},
    {150.,  25., 150., 150.,  25.},
    { 25., 150.,  25.,  25., 150.},
    { 25., 150.,  25.,  25., 150.},
    {150.,  25., 150., 150.,  25.}
-   };*/
+   };
 
 
 /*const PS::F64 COEF_REP[5][5] =
@@ -202,7 +208,7 @@ const PS::F64 BOND_LENGTH[2] = {0.7, 0.6};
 const PS::F64 COEF_ANGL[2] = { 10.,  3.};
 
 const PS::F64 RCUT = 1.0;
-const PS::F64 RMERGIN = 2.0;
+const PS::F64 RMERGIN = 3.0;
 //const PS::F64 RMERGIN = 3.5;//add by kiyoshiro
 //const PS::F64 RMERGIN = 0;//Reuse off
 const PS::F64 RSEARCH = RCUT+RMERGIN;

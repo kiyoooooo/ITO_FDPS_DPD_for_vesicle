@@ -683,7 +683,7 @@ int main(int argc, char **argv){
     ModifiedVelVerlet1(system_dpd,CONFIG);
     //    if(isMasterProc()) std::cout << "OK20 and s = " << s << std::endl;//add by kiyoshiro to know where is the error
     //    if(s%CONFIG.ndstep2==0){
-    if(s%100==0){//changed by kiyoshiro
+    if(s%1==0){//changed by kiyoshiro
 	  const PS::F64 epot = ReducePotentialEnergy(system_dpd);
 	  const PS::F64 elipid_pot = ReduceLipidPotentialEnergy(system_dpd);
 	  const PS::F64 ekin = CalcKineticEnergy(system_dpd);

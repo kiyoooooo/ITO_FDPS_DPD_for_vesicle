@@ -17,7 +17,7 @@ CXXFLAGS += -DPARTICLE_SIMULATOR_REUSE_LIST
 endif
 
 #PS_PATH?=$(HOME)/Documents/code/2020/nomuraFDPS/FDPS-master/src
-PS_PATH?=../../FDPS/src/
+PS_PATH?=../../../src
 FDPSFLAGS= -I$(PS_PATH)
 
 #下の記述逆なきがする岡田2020/05/13
