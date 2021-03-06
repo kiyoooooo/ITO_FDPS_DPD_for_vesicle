@@ -683,35 +683,36 @@ int main(int argc, char **argv){
     ModifiedVelVerlet1(system_dpd,CONFIG);
     //    if(isMasterProc()) std::cout << "OK20 and s = " << s << std::endl;//add by kiyoshiro to know where is the error
     //    if(s%CONFIG.ndstep2==0){
-    if(s%1==0){//changed by kiyoshiro
-	  const PS::F64 epot = ReducePotentialEnergy(system_dpd);
-	  const PS::F64 elipid_pot = ReduceLipidPotentialEnergy(system_dpd);
-	  const PS::F64 ekin = CalcKineticEnergy(system_dpd);
-	  ebond  = PS::Comm::getSum(ebond);
-	  eangle = PS::Comm::getSum(eangle);
-	  if(isMasterProc()){
-	  if(s==0) ofs_eng << "# step pot/NMOL bond/NMOL angle/NMOL (pot+bond+angle)/NMOL kin/NMOL (elipid_pot+ebond+eangle) all/NMOL" << std::endl;
-	  ofs_eng << std::setw(7) <<  s
-	  << std::setw(22) << std::setprecision(15) << epot/NMOL
-	  << std::setw(22) << std::setprecision(15) << ebond/NMOL
-	  << std::setw(22) << std::setprecision(15) << eangle/NMOL
-	  << std::setw(22) << std::setprecision(15) << (epot+ebond+eangle)/NMOL
-	  << std::setw(22) << std::setprecision(15) << ekin/NMOL/1.5 
-	  << std::setw(22) << std::setprecision(15) << (elipid_pot+ebond+eangle)//add by kiyoshiro
-	  << std::setw(22) << std::setprecision(15) << (epot+ebond+eangle+ekin)/NMOL<< std::endl;//add by kiyoshiro to check all energy is conservative or not
-	  }
-	  
-	  std::stringstream cdv,vel;
-	  cdv << output_dir << std::setw(7) << std::setfill('0') << s/CONFIG.ndstep2 << ".cdv";
-	  WriteCDVFile(system_dpd,cdv.str());
-	  vel << output_dir << std::setw(7) << std::setfill('0') << s/CONFIG.ndstep2 << ".vel";
-	  WriteVelFile(system_dpd,vel.str());
-	  #if 0
-	  std::stringstream force;
-	  force << output_dir << std::setw(7) << std::setfill('0') << s/CONFIG.ndstep2 << ".force";
-	  WriteForceFile(system_dpd,force.str());
-	  #endif
-	  //CalcRadiusOfTube(system_dpd,tube_radius,density);
+    //    if(s%1==0){//changed by kiyoshiro
+      const PS::F64 epot = ReducePotentialEnergy(system_dpd);
+      const PS::F64 elipid_pot = ReduceLipidPotentialEnergy(system_dpd);
+      const PS::F64 ekin = CalcKineticEnergy(system_dpd);
+      ebond  = PS::Comm::getSum(ebond);
+      eangle = PS::Comm::getSum(eangle);
+      if(isMasterProc()){
+	if(s==0) ofs_eng << "# step pot/NMOL bond/NMOL angle/NMOL (pot+bond+angle)/NMOL kin/NMOL (elipid_pot+ebond+eangle) all/NMOL" << std::endl;
+	ofs_eng << std::setw(7) <<  s
+		<< std::setw(22) << std::setprecision(15) << epot/NMOL
+		<< std::setw(22) << std::setprecision(15) << ebond/NMOL
+		<< std::setw(22) << std::setprecision(15) << eangle/NMOL
+		<< std::setw(22) << std::setprecision(15) << (epot+ebond+eangle)/NMOL
+		<< std::setw(22) << std::setprecision(15) << ekin/NMOL/1.5 
+		<< std::setw(22) << std::setprecision(15) << (elipid_pot+ebond+eangle)//add by kiyoshiro
+		<< std::setw(22) << std::setprecision(15) << (epot+ebond+eangle+ekin)/NMOL<< std::endl;//add by kiyoshiro to check all energy is conservative or not
+      }
+      //    }
+    if(s%CONFIG.ndstep2==0){
+      std::stringstream cdv,vel;
+      cdv << output_dir << std::setw(7) << std::setfill('0') << s/CONFIG.ndstep2 << ".cdv";
+      WriteCDVFile(system_dpd,cdv.str());
+      vel << output_dir << std::setw(7) << std::setfill('0') << s/CONFIG.ndstep2 << ".vel";
+      WriteVelFile(system_dpd,vel.str());
+#if 0
+      std::stringstream force;
+      force << output_dir << std::setw(7) << std::setfill('0') << s/CONFIG.ndstep2 << ".force";
+      WriteForceFile(system_dpd,force.str());
+#endif
+      //CalcRadiusOfTube(system_dpd,tube_radius,density);
     }  //commented out by kiyoshiro adviced by nomura-san
     if(s == 100){//add by kiyoshrio to check time after 100step
       system_dpd.clearTimeProfile();
